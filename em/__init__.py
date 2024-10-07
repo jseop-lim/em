@@ -79,7 +79,7 @@ class MultivariateNormalDistribution:
                 f"expected {(self.dim, self.dim)}"
             )
 
-    def pdf(self, x: npt.NDArray[np.float64]) -> np.float64:
+    def pdf(self, x: npt.NDArray[np.float64]) -> float:
         """Calculate the probability density function of the distribution."""
         x = x - self.mean
         return (  # type: ignore
@@ -89,3 +89,31 @@ class MultivariateNormalDistribution:
 
 
 MVN: TypeAlias = MultivariateNormalDistribution
+
+
+class GMMParameter(NamedTuple):
+    """Parameters of a Gaussian Mixture Model for a single cluster."""
+
+    mean: npt.NDArray[np.float64]
+    cov: npt.NDArray[np.float64]
+    weight: float
+
+
+def estimate_responsibilities(
+    x: npt.NDArray[np.float64],
+    parameters: list[GMMParameter],
+) -> npt.NDArray[np.float64]:
+    """Estimate the responsibilities of a cluster for each data instance."""
+    raise NotImplementedError
+
+
+def estimate_gmm_parameters(
+    x: npt.NDArray[np.float64],
+    responsibilities: npt.NDArray[np.float64],
+) -> list[GMMParameter]:
+    """Estimate the parameters of a Gaussian Mixture Model for a cluster.
+
+    The responsibilities are the probabilities of each data instance belonging
+    to the cluster.
+    """
+    raise NotImplementedError
