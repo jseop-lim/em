@@ -1,5 +1,4 @@
-from collections.abc import Iterator
-from itertools import chain
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import NamedTuple
 import matplotlib.pyplot as plt
@@ -8,23 +7,21 @@ import numpy.typing as npt
 
 
 def plot_line_graphs(
-    y_list: list[list],
-    x: list,
+    functions: dict[str, Callable[[float], float]],
+    x: list[int | float],
     title: str,
     y_label: str,
     x_label: str,
 ) -> None:
     """Plot a line graph with multiple lines."""
-    if all(chain((len(y) for y in y_list))):
-        raise ValueError("All y values must have the same length")
-    if len(x) != len(y_list[0]):
-        raise ValueError("x and y values must have the same length")
+    for name, f in functions.items():
+        y = [f(x_i) for x_i in x]
+        plt.plot(x, y, label=name)
 
-    for y in y_list:
-        plt.plot(x, y)
     plt.title(title)
     plt.ylabel(y_label)
     plt.xlabel(x_label)
+    plt.legend()
     plt.show()
 
 
