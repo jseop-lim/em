@@ -48,6 +48,7 @@ class TrainDataset(NamedTuple):
 def generate_dataset_parts(
     dataset: npt.NDArray[np.float64], k: int
 ) -> Iterator[TrainDataset]:
+    """Generate k parts of a dataset, each with a different validation part."""
     parts: list[npt.NDArray[np.float64]] = split_dataset_into_parts(dataset, k)
 
     return (
