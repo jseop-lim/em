@@ -167,17 +167,11 @@ def estimate_gmm_parameters(
 
     return [
         GMMParameter(
-            mean=np.average(x, axis=0, weights=responsibilities[:, k]),
-            cov=np.sum(
-                responsibilities[t, k]
-                * np.outer(
-                    x[t] - np.sum(responsibilities[:, k].reshape(-1, 1) * x, axis=0),  # type: ignore
-                    x[t] - np.sum(responsibilities[:, k].reshape(-1, 1) * x, axis=0),
-                )  # type: ignore
-                for t in range(n_instances)
-            )
-            / np.sum(responsibilities[:, k]),
+            mean=mean,
+            cov=np.cov(x.T, aweights=responsibilities[:, k], ddof=0)
+            - np.outer(mean, mean),
             weight=np.sum(responsibilities[:, k]) / n_instances,
         )
         for k in range(n_clusters)
+        if (mean := np.average(x, axis=0, weights=responsibilities[:, k]))
     ]
