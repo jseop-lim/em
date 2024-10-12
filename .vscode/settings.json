@@ -4,6 +4,7 @@
     },
     "flake8.importStrategy": "fromEnvironment",
     "flake8.args": [
-        "--ignore=E203"
+        "--ignore=E203",
+        "--max-length=88"
     ]
 }

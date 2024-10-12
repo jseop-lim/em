@@ -105,16 +105,46 @@ def estimate_responsibilities(
 ) -> npt.NDArray[np.float64]:
     """Estimate the responsibilities of each cluster for each data instance.
 
-    w_k^t
+    Args:
+        x: Data instances for a class of shape (N, D)
+        parameters: Parameters of the Gaussian Mixture Model for each cluster
+
+    Returns: A responsibility of shape (N, Z)
+        matrix W = [
+            [w_1^1, w_2^1, ..., w_Z^1],
+            [w_1^2, w_2^2, ..., w_Z^2],
+            ...,
+            [w_1^N, w_2^N, ..., w_Z^N],
+        ]
+        where w_z^t is the responsibility of cluster z for data instance t
     """
+    n_clusters = len(parameters)
+    n_instances = x.shape[0]
+
     return np.array(
         [
             [
-                parameter.weight
-                * MVN(mean=parameter.mean, cov=parameter.cov, dim=x.shape[1]).pdf(x_i)
-                for parameter in parameters
+                parameters[k].weight
+                * MVN(
+                    mean=parameters[k].mean,
+                    cov=parameters[k].cov,
+                    dim=x.shape[1],
+                ).pdf(x[t])
+                / evidence_t
+                for k in range(n_clusters)
+                if (
+                    evidence_t := sum(
+                        parameters[j].weight
+                        * MVN(
+                            mean=parameters[j].mean,
+                            cov=parameters[j].cov,
+                            dim=x.shape[1],
+                        ).pdf(x[t])
+                        for j in range(n_clusters)
+                    )
+                )
             ]
-            for x_i in x
+            for t in range(n_instances)
         ]
     )
 
