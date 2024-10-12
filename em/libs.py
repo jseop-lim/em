@@ -168,8 +168,13 @@ def estimate_gmm_parameters(
     return [
         GMMParameter(
             mean=mean,
-            cov=np.cov(x.T, aweights=responsibilities[:, k], ddof=0)
-            - np.outer(mean, mean),
+            cov=np.average(
+                np.array(
+                    [np.outer(x[t] - mean, x[t] - mean) for t in range(n_instances)]
+                ),
+                axis=0,
+                weights=responsibilities[:, k],
+            ),
             weight=np.sum(responsibilities[:, k]) / n_instances,
         )
         for k in range(n_clusters)
@@ -193,8 +198,11 @@ def em_algorithm(
 
     Returns: Parameters of the Gaussian Mixture Model for each cluster
     """
+    print("      EM algorithm")
+
     parameters = init_parameters
     for _ in range(max_iter):
+        print(f"        Iteration: {_ + 1}")
         responsibilities = estimate_gmm_responsibilities(x, parameters)
         new_parameters = estimate_gmm_parameters(x, responsibilities)
 
@@ -259,7 +267,11 @@ class GaussianMixtureModelClassifier:
     def set_known_parameters(self, parameters_list: list[list[GMMParameter]]) -> None:
         self.parameters_list = parameters_list
 
-    def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
+    def predict(
+        self,
+        x_set: npt.NDArray[np.float64],
+        y_set: npt.NDArray[np.int64],
+    ) -> npt.NDArray[np.int64]:
         """Predict the class of new data instances with bayesian decision rule.
 
         Args:
@@ -267,7 +279,7 @@ class GaussianMixtureModelClassifier:
 
         Returns: Predicted classes of shape (N,)
         """
-        return np.argmax(self.likelihood(x) * self.prior(), axis=1)  # type: ignore
+        return np.argmax(self.likelihood(x_set) * self.prior(), axis=1)  # type: ignore
 
     def likelihood(self, x_set: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """Calculate the likelihood of each data instance for each class.
@@ -299,16 +311,13 @@ class GaussianMixtureModelClassifier:
             ]
         ).T
 
-    def prior(self) -> npt.NDArray[np.float64]:
+    def prior(self, y_set: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
         """Calculate the prior probability of each class.
 
         Returns: Prior probability of each class of shape (K,)
         """
         return np.array(
-            [
-                np.sum(self.output_dataset == k) / self.output_dataset.shape[0]
-                for k in range(self.n_classes)
-            ]
+            [np.sum(y_set == k) / y_set.shape[0] for k in range(self.n_classes)]
         )
 
 
