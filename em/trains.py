@@ -45,11 +45,7 @@ def generate_init_parameters(
     return [
         libs.GMMParameter(
             mean=np.mean(input_dataset, axis=0),
-            cov=np.outer(
-                input_dataset - np.mean(input_dataset, axis=0),
-                input_dataset - np.mean(input_dataset, axis=0),
-            )
-            / (input_dataset.shape[0]),
+            cov=np.eye(input_dataset.shape[1]),
             weight=np.float64(1 / n_clusters),
         )
         for _ in range(n_clusters)

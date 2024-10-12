@@ -165,20 +165,24 @@ def estimate_gmm_parameters(
     n_clusters = responsibilities.shape[1]
     n_instances = x.shape[0]
 
+    def get_mean(k: int) -> npt.NDArray[np.float64]:
+        return np.average(x, axis=0, weights=responsibilities[:, k])  # type: ignore
+
     return [
         GMMParameter(
-            mean=mean,
-            cov=np.average(
-                np.array(
-                    [np.outer(x[t] - mean, x[t] - mean) for t in range(n_instances)]
-                ),
+            mean=get_mean(k),
+            cov=np.sum(
+                [
+                    responsibilities[t, k]
+                    * np.outer(x[t] - get_mean(k), x[t] - get_mean(k))
+                    for t in range(n_instances)
+                ],
                 axis=0,
-                weights=responsibilities[:, k],
-            ),
+            )
+            / np.sum(responsibilities[:, k]),
             weight=np.sum(responsibilities[:, k]) / n_instances,
         )
         for k in range(n_clusters)
-        if (mean := np.average(x, axis=0, weights=responsibilities[:, k]))
     ]
 
 
@@ -191,7 +195,7 @@ def em_algorithm(
     """Run the EM algorithm to estimate the parameters of a Gaussian Mixture Model.
 
     Args:
-        x: Data instances for a class of shape (N
+        x: Data instances for a class of shape (N, D)
         init_parameters: Initial parameters of the Gaussian Mixture Model for each cluster
         max_iter: The maximum number of iterations
         tol: The tolerance to stop the algorithm
