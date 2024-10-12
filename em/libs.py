@@ -1,7 +1,7 @@
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple, TypeAlias
+from typing import NamedTuple, Sequence, TypeAlias
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
@@ -9,7 +9,7 @@ import numpy.typing as npt
 
 def plot_line_graphs(
     functions: dict[str, Callable[[float], float]],
-    x: list[int | float],
+    x: Sequence[int | float],
     title: str,
     y_label: str,
     x_label: str,
@@ -247,17 +247,17 @@ def em_algorithm(
 class GaussianMixtureModelClassifier:
     def __init__(
         self,
-        input_dataset: npt.NDArray[np.float64],
-        output_dataset: npt.NDArray[np.float64],
+        # input_dataset: npt.NDArray[np.float64],
+        # output_dataset: npt.NDArray[np.float64],
         n_classes: int,
     ) -> None:
-        self.input_dataset = input_dataset
-        self.output_dataset = output_dataset
+        # self.input_dataset = input_dataset
+        # self.output_dataset = output_dataset
         self.n_classes = n_classes
         self.parameters: list[list[GMMParameter]] = []
 
-    def set_known_parameters(self, parameters: list[list[GMMParameter]]) -> None:
-        self.parameters = parameters
+    def set_known_parameters(self, parameters_list: list[list[GMMParameter]]) -> None:
+        self.parameters_list = parameters_list
 
     def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
         """Predict the class of new data instances with bayesian decision rule.
