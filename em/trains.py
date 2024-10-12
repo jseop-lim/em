@@ -12,6 +12,7 @@ TRAIN_DATA_PATH 환경변수로부터 파일경로를 가져옵니다.
 
 import os
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -51,18 +52,17 @@ for n_clusters in n_clusters_range:
     for fold_k, fold_train_dataset in enumerate(
         libs.generate_dataset_parts(train_dataset, fold_size)
     ):
+
+        def get_input_dataset(class_k: int) -> Any:
+            return fold_train_dataset.train[fold_train_dataset.train[:, -1] == class_k]
+
         gmm_parameters_list = [
             libs.em_algorithm(
-                input_dataset,
-                generate_init_parameters(input_dataset, n_clusters),
+                get_input_dataset(class_k),
+                generate_init_parameters(get_input_dataset(class_k), n_clusters),
                 n_clusters,
             )
             for class_k in range(n_classes)
-            if (
-                input_dataset := fold_train_dataset.train[
-                    fold_train_dataset.train[:, -1] == class_k
-                ]
-            )
         ]
         classifer = libs.GaussianMixtureModelClassifier(n_classes=n_classes)
         classifer.set_known_parameters(parameters_list=gmm_parameters_list)
