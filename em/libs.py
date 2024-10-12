@@ -177,6 +177,40 @@ def estimate_gmm_parameters(
     ]
 
 
+def em_algorithm(
+    x: npt.NDArray[np.float64],
+    init_parameters: list[GMMParameter],
+    max_iter: int = 100,
+    tol: float = 1e-6,
+) -> list[GMMParameter]:
+    """Run the EM algorithm to estimate the parameters of a Gaussian Mixture Model.
+
+    Args:
+        x: Data instances for a class of shape (N
+        init_parameters: Initial parameters of the Gaussian Mixture Model for each cluster
+        max_iter: The maximum number of iterations
+        tol: The tolerance to stop the algorithm
+
+    Returns: Parameters of the Gaussian Mixture Model for each cluster
+    """
+    parameters = init_parameters
+    for _ in range(max_iter):
+        responsibilities = estimate_gmm_responsibilities(x, parameters)
+        new_parameters = estimate_gmm_parameters(x, responsibilities)
+
+        if all(
+            np.linalg.norm(new_parameter.mean - parameter.mean) < tol
+            and np.linalg.norm(new_parameter.cov - parameter.cov) < tol
+            and abs(new_parameter.weight - parameter.weight) < tol
+            for new_parameter, parameter in zip(new_parameters, parameters)
+        ):
+            break
+
+        parameters = new_parameters
+
+    return parameters
+
+
 # class BayesianClassifier:
 #     def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
 #         """Predict the class of each data instances.
