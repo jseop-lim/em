@@ -94,9 +94,9 @@ MVN: TypeAlias = MultivariateNormalDistribution
 class GMMParameter(NamedTuple):
     """Parameters of a Gaussian Mixture Model for a single cluster."""
 
-    mean: npt.NDArray[np.float64]
-    cov: npt.NDArray[np.float64]
-    weight: np.float64
+    mean: npt.NDArray[np.float64]  # mu_z
+    cov: npt.NDArray[np.float64]  # sigma_z
+    weight: np.float64  # pi_z
 
 
 def estimate_responsibilities(
@@ -153,23 +153,28 @@ def estimate_gmm_parameters(
     x: npt.NDArray[np.float64],
     responsibilities: npt.NDArray[np.float64],
 ) -> list[GMMParameter]:
-    """Estimate the parameters of a Gaussian Mixture Model for each cluster."""
+    """Estimate the parameters of a Gaussian Mixture Model for each cluster.
+
+    Args:
+        x: Data instances for a class of shape (N, D)
+        responsibilities: Responsibilities of each cluster for each data instance
+            of shape (N, Z)
+
+    Returns: Parameters of the Gaussian Mixture Model for each cluster of shape (Z,)
+    """
     n_clusters = responsibilities.shape[1]
     n_instances = x.shape[0]
 
     return [
         GMMParameter(
-            mean=np.sum(
-                [responsibilities[i, k] * x[i] for i in range(n_instances)], axis=0
-            )
-            / np.sum(responsibilities[:, k]),
+            mean=np.average(x, axis=0, weights=responsibilities[:, k]),
             cov=np.sum(
-                [
-                    responsibilities[i, k]
-                    * np.outer(x[i] - np.mean(x, axis=0), x[i] - np.mean(x, axis=0))
-                    for i in range(n_instances)
-                ],
-                axis=0,
+                responsibilities[t, k]
+                * np.outer(
+                    x[t] - np.sum(responsibilities[:, k].reshape(-1, 1) * x, axis=0),  # type: ignore
+                    x[t] - np.sum(responsibilities[:, k].reshape(-1, 1) * x, axis=0),
+                )  # type: ignore
+                for t in range(n_instances)
             )
             / np.sum(responsibilities[:, k]),
             weight=np.sum(responsibilities[:, k]) / n_instances,
