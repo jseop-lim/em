@@ -175,3 +175,124 @@ def estimate_gmm_parameters(
         for k in range(n_clusters)
         if (mean := np.average(x, axis=0, weights=responsibilities[:, k]))
     ]
+
+
+# class BayesianClassifier:
+#     def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+#         """Predict the class of each data instances.
+
+#         Args:
+#             x: Data instances of shape (N, D)
+
+#         Returns: Predicted classes of shape (N,)
+#         """
+#         return np.argmax(self.likehood(x) * self.prior(), axis=1)
+
+#     def likehood(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+#         """Calculate the likelihood of each data instance for each class.
+
+#         Args:
+#             x: Data instances of shape (N, D)
+#             k: The number of classes
+
+#         Returns: Likelihood of each data instance for each class of shape (N, K)
+#         """
+#         raise NotImplementedError
+
+#     def prior(self) -> npt.NDArray[np.float64]:
+#         """Calculate the prior probability of each class.
+
+#         Args:
+#             k: The number of classes
+
+#         Returns: Prior probability of each class of shape (K,)
+#         """
+#         raise NotImplementedError
+
+
+class GaussianMixtureModelClassifier:
+    def __init__(
+        self,
+        input_dataset: npt.NDArray[np.float64],
+        output_dataset: npt.NDArray[np.float64],
+        n_classes: int,
+    ) -> None:
+        self.input_dataset = input_dataset
+        self.output_dataset = output_dataset
+        self.n_classes = n_classes
+        self.parameters: list[list[GMMParameter]] = []
+
+    def set_known_parameters(self, parameters: list[list[GMMParameter]]) -> None:
+        self.parameters = parameters
+
+    def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.int64]:
+        """Predict the class of new data instances with bayesian decision rule.
+
+        Args:
+            x: Data instances of shape (N, D)
+
+        Returns: Predicted classes of shape (N,)
+        """
+        return np.argmax(self.likelihood(x) * self.prior(), axis=1)  # type: ignore
+
+    def likelihood(self, x_set: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """Calculate the likelihood of each data instance for each class.
+
+        Args:
+            x_set: Data instances of shape (N, D)
+
+        Returns: Likelihood of each data instance for each class of shape (N, K)
+        """
+        n_features = x_set.shape[1]
+
+        return np.array(
+            [
+                [
+                    np.prod(
+                        [
+                            MVN(
+                                mean=parameter.mean,
+                                cov=parameter.cov,
+                                dim=n_features,
+                            ).pdf(x)
+                            * parameter.weight
+                            for parameter in parameters
+                        ]
+                    )
+                    for x in x_set
+                ]
+                for parameters in self.parameters
+            ]
+        ).T
+
+    def prior(self) -> npt.NDArray[np.float64]:
+        """Calculate the prior probability of each class.
+
+        Returns: Prior probability of each class of shape (K,)
+        """
+        return np.array(
+            [
+                np.sum(self.output_dataset == k) / self.output_dataset.shape[0]
+                for k in range(self.n_classes)
+            ]
+        )
+
+
+def calculate_error_rate(
+    y_true: npt.NDArray[np.int64], y_pred: npt.NDArray[np.int64]
+) -> float:
+    """Calculate the error rate of the prediction.
+
+    Args:
+        y_true: True classes of shape (N,)
+        y_pred: Predicted classes of shape (N,)
+
+    Returns: Error rate
+    """
+    if y_true.shape != y_pred.shape:
+        raise ValueError(
+            f"y_true shape is {y_true.shape}, y_pred shape is {y_pred.shape}"
+        )
+
+    n_instances = y_true.shape[0]
+    return float(np.sum(y_true != y_pred, dtype=np.float64) / n_instances)
