@@ -96,24 +96,53 @@ class GMMParameter(NamedTuple):
 
     mean: npt.NDArray[np.float64]
     cov: npt.NDArray[np.float64]
-    weight: float
+    weight: np.float64
 
 
 def estimate_responsibilities(
     x: npt.NDArray[np.float64],
     parameters: list[GMMParameter],
 ) -> npt.NDArray[np.float64]:
-    """Estimate the responsibilities of a cluster for each data instance."""
-    raise NotImplementedError
+    """Estimate the responsibilities of each cluster for each data instance.
+
+    w_k^t
+    """
+    return np.array(
+        [
+            [
+                parameter.weight
+                * MVN(mean=parameter.mean, cov=parameter.cov, dim=x.shape[1]).pdf(x_i)
+                for parameter in parameters
+            ]
+            for x_i in x
+        ]
+    )
 
 
 def estimate_gmm_parameters(
     x: npt.NDArray[np.float64],
     responsibilities: npt.NDArray[np.float64],
 ) -> list[GMMParameter]:
-    """Estimate the parameters of a Gaussian Mixture Model for a cluster.
+    """Estimate the parameters of a Gaussian Mixture Model for each cluster."""
+    n_clusters = responsibilities.shape[1]
+    n_instances = x.shape[0]
 
-    The responsibilities are the probabilities of each data instance belonging
-    to the cluster.
-    """
-    raise NotImplementedError
+    return [
+        GMMParameter(
+            mean=np.sum(
+                [responsibilities[i, k] * x[i] for i in range(n_instances)], axis=0
+            )
+            / np.sum(responsibilities[:, k]),
+            cov=np.sum(
+                [
+                    responsibilities[i, k]
+                    * np.outer(x[i] - np.mean(x, axis=0), x[i] - np.mean(x, axis=0))
+                    for i in range(n_instances)
+                ],
+                axis=0,
+            )
+            / np.sum(responsibilities[:, k]),
+            weight=np.sum(responsibilities[:, k]) / n_instances,
+        )
+        for k in range(n_clusters)
+    ]
