@@ -99,7 +99,7 @@ class GMMParameter(NamedTuple):
     weight: np.float64  # pi_z
 
 
-def estimate_responsibilities(
+def estimate_gmm_responsibilities(
     x: npt.NDArray[np.float64],
     parameters: list[GMMParameter],
 ) -> npt.NDArray[np.float64]:
