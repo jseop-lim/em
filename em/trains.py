@@ -25,7 +25,7 @@ if not (train_data_path_env := os.getenv("TRAIN_DATA_PATH")):
 train_data_path = Path(train_data_path_env)
 train_dataset = libs.parse_file_to_array(train_data_path)
 
-fold_size = 10
+fold_size = 5
 n_classes = 2
 n_min_clusters = 2
 n_max_clusters = 15
@@ -79,7 +79,7 @@ def train_gmm(
             libs.em_algorithm(
                 x=input_dataset,
                 init_parameters=generate_init_parameters(input_dataset, n_clusters),
-                max_iter=5000,
+                max_iter=3000,
             )
         )
 
