@@ -25,10 +25,10 @@ if not (train_data_path_env := os.getenv("TRAIN_DATA_PATH")):
 train_data_path = Path(train_data_path_env)
 train_dataset = libs.parse_file_to_array(train_data_path)
 
-fold_size = 5
+fold_size = 10
 n_classes = 2
 n_min_clusters = 2
-n_max_clusters = 5
+n_max_clusters = 15
 
 
 def generate_init_parameters(
@@ -44,7 +44,7 @@ def generate_init_parameters(
     Returns:
         n_clusters개의 GMMParameter 객체를 원소로 갖는 리스트
     """
-    init_sample_size = 100
+    init_sample_size = 1000
 
     return [
         libs.GMMParameter(
@@ -59,7 +59,8 @@ def generate_init_parameters(
 
 
 n_clusters_range = range(n_min_clusters, n_max_clusters + 1)
-error_rates_of_n_clusters: dict[int, float] = {}  # {n_clusters: error_rate}
+valid_error_rates_of_n_clusters: dict[int, float] = {}  # {n_clusters: error_rate}
+train_error_rates_of_n_clusters: dict[int, float] = {}
 
 print("Training...")
 
@@ -72,12 +73,13 @@ def train_gmm(
     gmm_parameters_list: list[list[libs.GMMParameter]] = []
 
     for class_k in range(n_classes):
+        print(f"      Class: {class_k}")
         input_dataset = train_dataset[train_dataset[:, -1] == class_k][:, :-1]
         gmm_parameters_list.append(
             libs.em_algorithm(
                 x=input_dataset,
                 init_parameters=generate_init_parameters(input_dataset, n_clusters),
-                max_iter=2000,
+                max_iter=3000,
             )
         )
 
@@ -90,6 +92,7 @@ for n_clusters in n_clusters_range:
     print(f"  Number of Clusters: {n_clusters}")
 
     error_rates_of_folds: list[float] = []
+    train_error_rates_of_folds: list[float] = []
 
     for fold_k, fold_train_dataset in enumerate(
         libs.generate_dataset_parts(train_dataset, fold_size)
@@ -111,23 +114,42 @@ for n_clusters in n_clusters_range:
                 y_true=fold_train_dataset.validation[:, -1],  # type: ignore
             )
         )
+        train_error_rates_of_folds.append(
+            libs.calculate_error_rate(
+                y_pred=classifer.predict(
+                    fold_train_dataset.train[:, :-1],
+                    fold_train_dataset.train[:, -1],  # type: ignore
+                ),
+                y_true=fold_train_dataset.train[:, -1],  # type: ignore
+            )
+        )
 
     for fold_k, error_rate in enumerate(error_rates_of_folds):
         print(f"    Fold {fold_k + 1} Validation Error Rate: {error_rate}")
 
-    error_rates_of_n_clusters[n_clusters] = np.mean(
+    valid_error_rates_of_n_clusters[n_clusters] = np.mean(
         np.array(error_rates_of_folds), dtype=float
+    )
+    train_error_rates_of_n_clusters[n_clusters] = np.mean(
+        np.array(train_error_rates_of_folds), dtype=float
     )
 
 # write result to file which name is current time
 with open(f"result_{datetime.now()}.csv", "w") as f:
-    f.write("Number of Clusters,Error Rate\n")
-    for n_clusters, error_rate in error_rates_of_n_clusters.items():
-        f.write(f"{n_clusters},{error_rate}\n")
+    f.write("Number of Clusters,Valid Error Rate,Train Error Rate\n")
+    for n_clusters, valid_error_rate, train_error_rate in zip(
+        valid_error_rates_of_n_clusters.keys(),
+        valid_error_rates_of_n_clusters.values(),
+        train_error_rates_of_n_clusters.values(),
+    ):
+        f.write(f"{n_clusters},{valid_error_rate},{train_error_rate}\n")
 
 libs.plot_line_graphs(
     x=n_clusters_range,
-    ys={"": list(error_rates_of_n_clusters.values())},
+    ys={
+        "validation": list(valid_error_rates_of_n_clusters.values()),
+        "train": list(train_error_rates_of_n_clusters.values()),
+    },
     x_label="Number of Clusters",
     y_label="Validation Error Rate",
     title="Cross Validation",
@@ -144,8 +166,8 @@ test_dataset = libs.parse_file_to_array(test_data_path)
 
 print("Final Training...")
 selected_n_clusters: int = min(
-    error_rates_of_n_clusters,
-    key=error_rates_of_n_clusters.get,
+    valid_error_rates_of_n_clusters,
+    key=valid_error_rates_of_n_clusters.get,
 )
 
 final_classifer = train_gmm(

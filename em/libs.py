@@ -246,8 +246,6 @@ def em_algorithm(
 
     Returns: Parameters of the Gaussian Mixture Model for each cluster
     """
-    print("      EM algorithm")
-
     parameters = init_parameters
     for i in range(max_iter):
         responsibilities = estimate_gmm_responsibilities(x, parameters)
@@ -264,7 +262,7 @@ def em_algorithm(
 
         parameters = new_parameters
 
-    print(f"      Iterations: {i + 1}")
+    print(f"        Iterations: {i + 1}")
     return parameters
 
 
