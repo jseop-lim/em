@@ -79,7 +79,7 @@ def train_gmm(
             libs.em_algorithm(
                 x=input_dataset,
                 init_parameters=generate_init_parameters(input_dataset, n_clusters),
-                max_iter=3000,
+                max_iter=5000,
             )
         )
 
