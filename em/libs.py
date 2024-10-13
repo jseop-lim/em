@@ -360,4 +360,4 @@ def calculate_error_rate(
         )
 
     n_instances = y_true.shape[0]
-    return float(np.sum(y_true == y_pred, dtype=np.float64) / n_instances)
+    return float(np.sum(y_true != y_pred, dtype=np.float64) / n_instances)
