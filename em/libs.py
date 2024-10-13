@@ -16,7 +16,7 @@ def plot_line_graphs(
 ) -> None:
     """Plot a line graph with multiple lines."""
     for name, y in ys.items():
-        plt.plot(x, y, label=name)
+        plt.plot(x, y, label=name, linestyle="-", marker="o")
 
     plt.xticks(x)
     plt.title(title)
