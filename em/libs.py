@@ -164,26 +164,62 @@ def estimate_gmm_parameters(
     """
     n_clusters = responsibilities.shape[1]
     n_instances = x.shape[0]
+    n_features = x.shape[1]
 
-    def get_mean(k: int) -> npt.NDArray[np.float64]:
-        return np.average(x, axis=0, weights=responsibilities[:, k])  # type: ignore
+    # Total responsibility for each cluster
+    responsibility_sums = np.sum(responsibilities, axis=0)
 
+    # Compute the means for each cluster (shape (Z, D))
+    means = np.dot(responsibilities.T, x) / responsibility_sums[:, np.newaxis]
+
+    # Compute covariances for each cluster
+    covariances = np.zeros((n_clusters, n_features, n_features))
+
+    for k in range(n_clusters):
+        # Calculate the deviation of x from the mean
+        x_centered = x - means[k]
+
+        # Weighted covariance matrix for each cluster
+        covariances[k] = (
+            np.dot((responsibilities[:, k][:, np.newaxis] * x_centered).T, x_centered)
+            / responsibility_sums[k]
+        )
+
+    # Compute weights for each cluster
+    weights = responsibility_sums / n_instances
+
+    # Create GMMParameter objects for each cluster
     return [
         GMMParameter(
-            mean=get_mean(k),
-            cov=np.sum(
-                [
-                    responsibilities[t, k]
-                    * np.outer(x[t] - get_mean(k), x[t] - get_mean(k))
-                    for t in range(n_instances)
-                ],
-                axis=0,
-            )
-            / np.sum(responsibilities[:, k]),
-            weight=np.sum(responsibilities[:, k]) / n_instances,
+            mean=means[k],
+            cov=covariances[k],
+            weight=weights[k],
         )
         for k in range(n_clusters)
     ]
+
+    # n_clusters = responsibilities.shape[1]
+    # n_instances = x.shape[0]
+
+    # def get_mean(k: int) -> npt.NDArray[np.float64]:
+    #     return np.average(x, axis=0, weights=responsibilities[:, k])  # type: ignore
+
+    # return [
+    #     GMMParameter(
+    #         mean=get_mean(k),
+    #         cov=np.sum(
+    #             [
+    #                 responsibilities[t, k]
+    #                 * np.outer(x[t] - get_mean(k), x[t] - get_mean(k))
+    #                 for t in range(n_instances)
+    #             ],
+    #             axis=0,
+    #         )
+    #         / np.sum(responsibilities[:, k]),
+    #         weight=np.sum(responsibilities[:, k]) / n_instances,
+    #     )
+    #     for k in range(n_clusters)
+    # ]
 
 
 def em_algorithm(

@@ -24,7 +24,7 @@ if not (train_data_path_env := os.getenv("TRAIN_DATA_PATH")):
     raise ValueError("TRAIN_DATA_PATH environment variable is not set")
 
 train_data_path = Path(train_data_path_env)
-train_dataset = libs.parse_file_to_array(train_data_path)[:, :]
+train_dataset = libs.parse_file_to_array(train_data_path)
 
 fold_size = 7
 n_classes = 2
