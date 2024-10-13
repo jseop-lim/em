@@ -57,6 +57,28 @@ error_rates_of_n_clusters: dict[int, float] = {}  # {n_clusters: error_rate}
 
 print("Training...")
 
+
+def train_gmm(
+    train_dataset: npt.NDArray[np.float64],
+    n_classes: int,
+    n_clusters: int,
+) -> libs.GaussianMixtureModelClassifier:
+    gmm_parameters_list: list[list[libs.GMMParameter]] = []
+
+    for class_k in range(n_classes):
+        input_dataset = train_dataset[train_dataset[:, -1] == class_k][:, :-1]
+        gmm_parameters_list.append(
+            libs.em_algorithm(
+                x=input_dataset,
+                init_parameters=generate_init_parameters(input_dataset, n_clusters),
+            )
+        )
+
+    classifer = libs.GaussianMixtureModelClassifier(n_classes=n_classes)
+    classifer.set_known_parameters(parameters_list=gmm_parameters_list)
+    return classifer
+
+
 for n_clusters in n_clusters_range:
     print(f"  Number of Clusters: {n_clusters}")
 
@@ -67,27 +89,15 @@ for n_clusters in n_clusters_range:
     ):
         print(f"    Fold: {fold_k + 1}")
 
-        gmm_parameters_list: list[list[libs.GMMParameter]] = []
-
-        for class_k in range(n_classes):
-            input_dataset = fold_train_dataset.train[
-                fold_train_dataset.train[:, -1] == class_k
-            ][:, :-1]
-            gmm_parameters_list.append(
-                libs.em_algorithm(
-                    x=input_dataset,
-                    init_parameters=generate_init_parameters(input_dataset, n_clusters),
-                    # max_iter=10,
-                )
-            )
-
-        classifer = libs.GaussianMixtureModelClassifier(n_classes=n_classes)
-        classifer.set_known_parameters(parameters_list=gmm_parameters_list)
+        classifer = train_gmm(
+            train_dataset=fold_train_dataset.train,
+            n_classes=n_classes,
+            n_clusters=n_clusters,
+        )
         predicted_outputs = classifer.predict(
             fold_train_dataset.validation[:, :-1],
             fold_train_dataset.validation[:, -1],  # type: ignore
         )
-
         error_rates_of_folds.append(
             libs.calculate_error_rate(
                 y_pred=predicted_outputs,
@@ -96,7 +106,7 @@ for n_clusters in n_clusters_range:
         )
 
     for fold_k, error_rate in enumerate(error_rates_of_folds):
-        print(f"    Fold {fold_k + 1} Error Rate: {error_rate}")
+        print(f"    Fold {fold_k + 1} Validation Error Rate: {error_rate}")
 
     error_rates_of_n_clusters[n_clusters] = np.mean(
         np.array(error_rates_of_folds), dtype=float
@@ -110,8 +120,40 @@ with open(f"result_{datetime.now()}.csv", "w") as f:
 
 libs.plot_line_graphs(
     x=n_clusters_range,
-    ys={"n_clusters": list(error_rates_of_n_clusters.values())},
+    ys={"": list(error_rates_of_n_clusters.values())},
     x_label="Number of Clusters",
-    y_label="Error Rate",
-    title="Error Rate vs. Number of Clusters",
+    y_label="Validation Error Rate",
+    title="Cross Validation",
 )
+
+
+print("Training is done.")
+
+if not (test_data_path_env := os.getenv("TEST_DATA_PATH")):
+    raise ValueError("TEST_DATA_PATH environment variable is not set")
+
+test_data_path = Path(test_data_path_env)
+test_dataset = libs.parse_file_to_array(test_data_path)
+
+print("Final Training...")
+selected_n_clusters: int = min(
+    error_rates_of_n_clusters,
+    key=error_rates_of_n_clusters.get,
+)
+
+final_classifer = train_gmm(
+    train_dataset=train_dataset,
+    n_classes=n_classes,
+    n_clusters=selected_n_clusters,
+)
+
+print("Testing...")
+predicted_outputs = final_classifer.predict(
+    test_dataset[:, :-1],
+    test_dataset[:, -1],  # type: ignore
+)
+error_rate = libs.calculate_error_rate(
+    y_pred=predicted_outputs,
+    y_true=test_dataset[:, -1],  # type: ignore
+)
+print(f"Test Error Rate: {error_rate}")
