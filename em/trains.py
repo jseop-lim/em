@@ -44,8 +44,8 @@ def generate_init_parameters(
     """
     return [
         libs.GMMParameter(
-            mean=np.random.rand(input_dataset.shape[1]),
-            cov=np.eye(input_dataset.shape[1]),
+            mean=input_dataset[np.random.choice(input_dataset.shape[0])],
+            cov=np.cov(input_dataset, rowvar=False),
             weight=np.float64(1 / n_clusters),
         )
         for _ in range(n_clusters)

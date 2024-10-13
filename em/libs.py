@@ -99,6 +99,42 @@ class GMMParameter(NamedTuple):
     weight: np.float64  # pi_z
 
 
+def calculate_mvn_pdfs(
+    x: npt.NDArray[np.float64], parameters: list[GMMParameter]
+) -> npt.NDArray[np.float64]:
+    """Calculate the probability density functions of each cluster for each data instance.
+
+    Args:
+        x: Data instances for a class of shape (N, D)
+        parameters: Parameters of the Gaussian Mixture Model for each cluster of shape (Z,)
+
+    Returns: Probability density functions of each cluster for each data instance of shape (N, Z)
+    """
+    n_features: int = x.shape[1]
+
+    covariances = np.array([p.cov for p in parameters])  # (Z, D, D)
+    means = np.array([p.mean for p in parameters])  # (Z, D)
+
+    # 공분산 행렬의 행렬식과 역행렬 구하기 (Z, D, D) -> (Z,)
+    det_cov = np.linalg.det(covariances)  # (Z,)
+    inv_cov = np.linalg.inv(covariances)  # (Z, D, D)
+
+    # 데이터 포인트와 평균의 차이 계산, 브로드캐스팅을 통해 (N, Z, D) 크기로 만듦
+    diff = x[:, np.newaxis, :] - means[np.newaxis, :, :]  # (N, Z, D)
+
+    # Mahalanobis 거리 계산: (x - μ)^T Σ^{-1} (x - μ) 계산
+    mahalanobis_term = np.einsum("nij,ijk,nlk->nil", diff, inv_cov, diff)  # (N, Z)
+
+    # 정규분포 확률밀도 계산
+    normalization_term = 1 / np.sqrt((2 * np.pi) ** n_features * det_cov)  # (Z,)
+    exp_term = np.exp(-0.5 * mahalanobis_term)  # (N, Z)
+
+    # 최종 확률밀도 (N, Z)로 계산
+    pdf_values: npt.NDArray[np.float64] = normalization_term * exp_term  # (N, Z)
+
+    return pdf_values
+
+
 def estimate_gmm_responsibilities(
     x: npt.NDArray[np.float64],
     parameters: list[GMMParameter],
@@ -118,23 +154,8 @@ def estimate_gmm_responsibilities(
         ]
         where w_z^t is the responsibility of cluster z for data instance t
     """
-    n_clusters = len(parameters)
-    n_instances = x.shape[0]
-
     # Precompute the pdf values for all clusters and data instances
-    pdfs = np.array(  # shape: (N, Z)
-        [
-            [
-                MVN(
-                    mean=parameters[k].mean,
-                    cov=parameters[k].cov,
-                    dim=x.shape[1],
-                ).pdf(x[t])
-                for k in range(n_clusters)
-            ]
-            for t in range(n_instances)
-        ]
-    )
+    pdfs = calculate_mvn_pdfs(x, parameters)  # shape: (N, Z)
 
     # Extract weights for each cluster
     weights = np.array([p.weight for p in parameters])  # shape: (Z,)
