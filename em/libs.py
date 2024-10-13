@@ -1,7 +1,6 @@
 from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple, Sequence, TypeAlias
+from typing import NamedTuple, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
@@ -61,36 +60,6 @@ def generate_dataset_parts(
     )
 
 
-# cluster 수 z, train data 주어질 때 학습된 모델을 반환
-
-
-@dataclass
-class MultivariateNormalDistribution:
-    mean: npt.NDArray[np.float64]
-    cov: npt.NDArray[np.float64]
-    dim: int = 1
-
-    def __post_init__(self) -> None:
-        if self.mean.shape != (self.dim,):
-            raise ValueError(f"Mean shape is {self.mean.shape}, expected {(self.dim,)}")
-        if self.cov.shape != (self.dim, self.dim):
-            raise ValueError(
-                f"Covariance shape is {self.cov.shape},"
-                f"expected {(self.dim, self.dim)}"
-            )
-
-    def pdf(self, x: npt.NDArray[np.float64]) -> float:
-        """Calculate the probability density function of the distribution."""
-        x = x - self.mean
-        return (  # type: ignore
-            np.exp(-0.5 * x @ np.linalg.inv(self.cov) @ x)
-            / np.sqrt((2 * np.pi) ** self.dim * np.linalg.det(self.cov))
-        )
-
-
-MVN: TypeAlias = MultivariateNormalDistribution
-
-
 class GMMParameter(NamedTuple):
     """Parameters of a Gaussian Mixture Model for a single cluster."""
 
@@ -100,7 +69,8 @@ class GMMParameter(NamedTuple):
 
 
 def calculate_mvn_pdfs(
-    x: npt.NDArray[np.float64], parameters: list[GMMParameter]
+    x: npt.NDArray[np.float64],
+    parameters: list[GMMParameter],
 ) -> npt.NDArray[np.float64]:
     """Calculate the probability density functions of each cluster for each data instance.
 
@@ -310,7 +280,9 @@ class GaussianMixtureModelClassifier:
         # self.input_dataset = input_dataset
         # self.output_dataset = output_dataset
         self.n_classes = n_classes
-        self.parameters_list: list[list[GMMParameter]] = []
+        self.parameters_list: list[
+            list[GMMParameter]
+        ] = []  # parameteres for each class
 
     def set_known_parameters(self, parameters_list: list[list[GMMParameter]]) -> None:
         self.parameters_list = parameters_list
@@ -327,9 +299,16 @@ class GaussianMixtureModelClassifier:
 
         Returns: Predicted classes of shape (N,)
         """
-        return np.argmax(self.likelihood(x_set) * self.prior(y_set), axis=1)  # type: ignore
+        return np.argmax(  # type: ignore
+            self.likelihood(x_set, y_set) * self.prior(y_set),
+            axis=1,
+        )
 
-    def likelihood(self, x_set: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def likelihood(
+        self,
+        x_set: npt.NDArray[np.float64],
+        y_set: npt.NDArray[np.int64],
+    ) -> npt.NDArray[np.float64]:
         """Calculate the likelihood of each data instance for each class.
 
         Args:
@@ -337,27 +316,17 @@ class GaussianMixtureModelClassifier:
 
         Returns: Likelihood of each data instance for each class of shape (N, K)
         """
-        n_features = x_set.shape[1]
+        n_instances = x_set.shape[0]
 
-        return np.array(
-            [
-                [
-                    np.prod(
-                        [
-                            MVN(
-                                mean=parameter.mean,
-                                cov=parameter.cov,
-                                dim=n_features,
-                            ).pdf(x)
-                            * parameter.weight
-                            for parameter in parameters
-                        ]
-                    )
-                    for x in x_set
-                ]
-                for parameters in self.parameters_list
-            ]
-        ).T
+        likelihoods = np.zeros((n_instances, self.n_classes))
+
+        for class_k in range(self.n_classes):
+            parameters = self.parameters_list[class_k]
+            likelihoods[:, class_k] = np.prod(
+                calculate_mvn_pdfs(x_set, parameters), axis=1
+            )
+
+        return likelihoods
 
     def prior(self, y_set: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
         """Calculate the prior probability of each class.
