@@ -301,23 +301,45 @@ class GaussianMixtureModelClassifier:
         Returns: Predicted classes of shape (N,)
         """
         return np.argmax(  # type: ignore
-            self.likelihood(x_set, y_set) * self.prior(y_set),
+            self.log_likelihood(x_set, y_set) + self.log_prior(y_set),
             axis=1,
         )
 
-    def likelihood(
+    def log_likelihood(
         self,
         x_set: npt.NDArray[np.float64],
         y_set: npt.NDArray[np.int64],
-    ) -> npt.NDArray[np.float64]: ...
+    ) -> npt.NDArray[np.float64]:
+        """
 
-    def prior(self, y_set: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
+        Returns:
+            (N, K)
+        """
+        log_likelihood = []
+
+        for class_k in range(self.n_classes):
+            pdfs = calculate_mvn_pdfs(
+                x_set, self.parameters_list[class_k]
+            )  # 모든 instance x에 대한 모든 group의 pdf shape of (N, Z)
+            weights = np.array(
+                [parameter.weight for parameter in self.parameters_list[class_k]]
+            )  # (Z,)
+            log_likelihood_k: npt.NDArray[np.float64] = np.log(
+                np.dot(pdfs, weights)
+            )  # (N,)
+            log_likelihood.append(log_likelihood_k)
+
+        return np.array(log_likelihood).T
+
+    def log_prior(self, y_set: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
         """Calculate the prior probability of each class.
 
         Returns: Prior probability of each class of shape (K,)
         """
-        return np.array(
-            [np.sum(y_set == k) / y_set.shape[0] for k in range(self.n_classes)]
+        return np.log(
+            np.array(
+                [np.sum(y_set == k) / y_set.shape[0] for k in range(self.n_classes)]
+            ),
         )
 
 
@@ -338,4 +360,4 @@ def calculate_error_rate(
         )
 
     n_instances = y_true.shape[0]
-    return float(np.sum(y_true != y_pred, dtype=np.float64) / n_instances)
+    return float(np.sum(y_true == y_pred, dtype=np.float64) / n_instances)
