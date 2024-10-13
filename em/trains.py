@@ -25,8 +25,10 @@ if not (train_data_path_env := os.getenv("TRAIN_DATA_PATH")):
 train_data_path = Path(train_data_path_env)
 train_dataset = libs.parse_file_to_array(train_data_path)
 
-fold_size = 7
+fold_size = 5
 n_classes = 2
+n_min_clusters = 2
+n_max_clusters = 5
 
 
 def generate_init_parameters(
@@ -42,9 +44,13 @@ def generate_init_parameters(
     Returns:
         n_clusters개의 GMMParameter 객체를 원소로 갖는 리스트
     """
+    init_sample_size = 100
+
     return [
         libs.GMMParameter(
-            mean=input_dataset[np.random.choice(input_dataset.shape[0])],
+            mean=input_dataset[
+                np.random.choice(len(input_dataset), init_sample_size)
+            ].mean(axis=0),
             cov=np.cov(input_dataset, rowvar=False),
             weight=np.float64(1 / n_clusters),
         )
@@ -52,7 +58,7 @@ def generate_init_parameters(
     ]
 
 
-n_clusters_range = range(2, 3)
+n_clusters_range = range(n_min_clusters, n_max_clusters + 1)
 error_rates_of_n_clusters: dict[int, float] = {}  # {n_clusters: error_rate}
 
 print("Training...")
@@ -71,6 +77,7 @@ def train_gmm(
             libs.em_algorithm(
                 x=input_dataset,
                 init_parameters=generate_init_parameters(input_dataset, n_clusters),
+                max_iter=2000,
             )
         )
 
