@@ -53,7 +53,7 @@ def generate_init_parameters(
 
 
 n_clusters_range = range(2, 3)
-error_rates_of_n_clusters: dict[int, float] = {}
+error_rates_of_n_clusters: dict[int, float] = {}  # {n_clusters: error_rate}
 
 print("Training...")
 
@@ -110,9 +110,7 @@ with open(f"result_{datetime.now()}.csv", "w") as f:
 
 libs.plot_line_graphs(
     x=n_clusters_range,
-    functions={
-        "error_rate": lambda z: error_rates_of_n_clusters.get(z, 0),  # type: ignore
-    },
+    ys={"n_clusters": list(error_rates_of_n_clusters.values())},
     x_label="Number of Clusters",
     y_label="Error Rate",
     title="Error Rate vs. Number of Clusters",

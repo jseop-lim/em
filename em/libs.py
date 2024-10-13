@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Sequence, TypeAlias
@@ -8,17 +8,17 @@ import numpy.typing as npt
 
 
 def plot_line_graphs(
-    functions: dict[str, Callable[[float], float]],
     x: Sequence[int | float],
+    ys: dict[str, Sequence[int | float]],
     title: str,
     y_label: str,
     x_label: str,
 ) -> None:
     """Plot a line graph with multiple lines."""
-    for name, f in functions.items():
-        y = [f(x_i) for x_i in x]
+    for name, y in ys.items():
         plt.plot(x, y, label=name)
 
+    plt.xticks(x)
     plt.title(title)
     plt.ylabel(y_label)
     plt.xlabel(x_label)
