@@ -249,8 +249,7 @@ def em_algorithm(
     print("      EM algorithm")
 
     parameters = init_parameters
-    for _ in range(max_iter):
-        print(f"        Iteration: {_ + 1}")
+    for i in range(max_iter):
         responsibilities = estimate_gmm_responsibilities(x, parameters)
         new_parameters = estimate_gmm_parameters(x, responsibilities)
 
@@ -260,10 +259,12 @@ def em_algorithm(
             and abs(new_parameter.weight - parameter.weight) < tol
             for new_parameter, parameter in zip(new_parameters, parameters)
         ):
+            parameters = new_parameters
             break
 
         parameters = new_parameters
 
+    print(f"      Iterations: {i + 1}")
     return parameters
 
 
@@ -308,25 +309,7 @@ class GaussianMixtureModelClassifier:
         self,
         x_set: npt.NDArray[np.float64],
         y_set: npt.NDArray[np.int64],
-    ) -> npt.NDArray[np.float64]:
-        """Calculate the likelihood of each data instance for each class.
-
-        Args:
-            x_set: Data instances of shape (N, D)
-
-        Returns: Likelihood of each data instance for each class of shape (N, K)
-        """
-        n_instances = x_set.shape[0]
-
-        likelihoods = np.zeros((n_instances, self.n_classes))
-
-        for class_k in range(self.n_classes):
-            parameters = self.parameters_list[class_k]
-            likelihoods[:, class_k] = np.prod(
-                calculate_mvn_pdfs(x_set, parameters), axis=1
-            )
-
-        return likelihoods
+    ) -> npt.NDArray[np.float64]: ...
 
     def prior(self, y_set: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
         """Calculate the prior probability of each class.
