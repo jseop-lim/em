@@ -121,32 +121,32 @@ def estimate_gmm_responsibilities(
     n_clusters = len(parameters)
     n_instances = x.shape[0]
 
-    def get_evidence(t: int) -> float:  # type: ignore
-        return sum(
-            parameters[j].weight
-            * MVN(
-                mean=parameters[j].mean,
-                cov=parameters[j].cov,
-                dim=x.shape[1],
-            ).pdf(x[t])
-            for j in range(n_clusters)
-        )
-
-    return np.array(
+    # Precompute the pdf values for all clusters and data instances
+    pdfs = np.array(  # shape: (N, Z)
         [
             [
-                parameters[k].weight
-                * MVN(
+                MVN(
                     mean=parameters[k].mean,
                     cov=parameters[k].cov,
                     dim=x.shape[1],
                 ).pdf(x[t])
-                / get_evidence(t)
                 for k in range(n_clusters)
             ]
             for t in range(n_instances)
         ]
     )
+
+    # Extract weights for each cluster
+    weights = np.array([p.weight for p in parameters])  # shape: (Z,)
+
+    # Calculate evidence for all instances
+    weighted_pdfs = pdfs * weights  # shape: (N, Z)
+    evidence = np.sum(weighted_pdfs, axis=1).reshape(-1, 1)  # shape: (N, 1)
+
+    # Calculate responsibilities
+    responsibilities: npt.NDArray[np.float64] = weighted_pdfs / evidence
+
+    return responsibilities
 
 
 def estimate_gmm_parameters(
@@ -221,6 +221,9 @@ def em_algorithm(
         parameters = new_parameters
 
     return parameters
+
+
+#### 예측 모델 ####
 
 
 class GaussianMixtureModelClassifier:
