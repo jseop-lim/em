@@ -109,27 +109,44 @@ def calculate_mvn_pdfs(
         parameters: Parameters of the Gaussian Mixture Model for each cluster of shape (Z,)
 
     Returns: Probability density functions of each cluster for each data instance of shape (N, Z)
+        matrix P = [
+            [p_1^1, p_2^1, ..., p_Z^1],
+            [p_1^2, p_2^2, ..., p_Z^2],
+            ...,
+            [p_1^N, p_2^N, ..., p_Z^N],
+        ]
+        where p_z^t is the probability density of cluster z for data instance t
     """
-    n_features: int = x.shape[1]
+    if x.ndim != 2:
+        raise ValueError(f"Data instances must have 2 dimensions, got {x.ndim}")
 
-    covariances = np.array([p.cov for p in parameters])  # (Z, D, D)
+    _, n_features = x.shape
+
+    # 클러스터의 평균 및 공분산 행렬 가져오기
     means = np.array([p.mean for p in parameters])  # (Z, D)
+    covariances = np.array([p.cov for p in parameters])  # (Z, D, D)
 
-    # 공분산 행렬의 행렬식과 역행렬 구하기 (Z, D, D) -> (Z,)
+    # 공분산 행렬의 행렬식과 역행렬 구하기
     det_cov = np.linalg.det(covariances)  # (Z,)
     inv_cov = np.linalg.inv(covariances)  # (Z, D, D)
 
     # 데이터 포인트와 평균의 차이 계산, 브로드캐스팅을 통해 (N, Z, D) 크기로 만듦
     diff = x[:, np.newaxis, :] - means[np.newaxis, :, :]  # (N, Z, D)
 
-    # Mahalanobis 거리 계산: (x - μ)^T Σ^{-1} (x - μ) 계산
-    mahalanobis_term = np.einsum("nij,ijk,nlk->nil", diff, inv_cov, diff)  # (N, Z)
+    # Mahalanobis 거리 계산: (x - μ)^T Σ^{-1} (x - μ)
+    # np.einsum에서 (N, Z, D)와 (Z, D, D)를 곱하여 (N, Z) 형태로 축소해야 합니다.
+    mahalanobis_term = np.einsum("nzd,zde,nze->nz", diff, inv_cov, diff)  # (N, Z)
 
-    # 정규분포 확률밀도 계산
+    # 정규화 상수 계산
     normalization_term = 1 / np.sqrt((2 * np.pi) ** n_features * det_cov)  # (Z,)
+    normalization_term = normalization_term[
+        np.newaxis, :
+    ]  # (1, Z)로 확장하여 브로드캐스팅 준비
+
+    # 지수 항 계산
     exp_term = np.exp(-0.5 * mahalanobis_term)  # (N, Z)
 
-    # 최종 확률밀도 (N, Z)로 계산
+    # 최종 확률밀도 계산
     pdf_values: npt.NDArray[np.float64] = normalization_term * exp_term  # (N, Z)
 
     return pdf_values
