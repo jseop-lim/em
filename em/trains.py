@@ -10,6 +10,7 @@ TRAIN_DATA_PATH 환경변수로부터 파일경로를 가져옵니다.
    예측 결과를 저장합니다.
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
 from typing import Any
@@ -23,9 +24,9 @@ if not (train_data_path_env := os.getenv("TRAIN_DATA_PATH")):
     raise ValueError("TRAIN_DATA_PATH environment variable is not set")
 
 train_data_path = Path(train_data_path_env)
-train_dataset = libs.parse_file_to_array(train_data_path)[:1000, :]
+train_dataset = libs.parse_file_to_array(train_data_path)[:, :]
 
-fold_size = 10
+fold_size = 7
 n_classes = 2
 
 
@@ -44,7 +45,7 @@ def generate_init_parameters(
     """
     return [
         libs.GMMParameter(
-            mean=np.mean(input_dataset, axis=0),
+            mean=np.random.rand(input_dataset.shape[1]),
             cov=np.eye(input_dataset.shape[1]),
             weight=np.float64(1 / n_clusters),
         )
@@ -53,7 +54,7 @@ def generate_init_parameters(
 
 
 n_clusters_range = range(2, 3)
-error_rates_of_n_clusters: list[float] = []
+error_rates_of_n_clusters: dict[int, float] = {}
 
 print("Training...")
 
@@ -68,13 +69,17 @@ for n_clusters in n_clusters_range:
         print(f"    Fold: {fold_k + 1}")
 
         def get_input_dataset(class_k: int) -> Any:
-            return fold_train_dataset.train[fold_train_dataset.train[:, -1] == class_k]
+            return fold_train_dataset.train[fold_train_dataset.train[:, -1] == class_k][
+                :, :-1
+            ]
 
         gmm_parameters_list = [
             libs.em_algorithm(
-                get_input_dataset(class_k),
-                generate_init_parameters(get_input_dataset(class_k), n_clusters),
-                n_clusters,
+                x=get_input_dataset(class_k),
+                init_parameters=generate_init_parameters(
+                    get_input_dataset(class_k), n_clusters
+                ),
+                # max_iter=10,
             )
             for class_k in range(n_classes)
         ]
@@ -92,14 +97,24 @@ for n_clusters in n_clusters_range:
             )
         )
 
-    error_rates_of_n_clusters.append(
-        sum(error_rates_of_folds) / len(error_rates_of_folds)
+    for fold_k, error_rate in enumerate(error_rates_of_folds):
+        print(f"    Fold {fold_k + 1} Error Rate: {error_rate}")
+
+    error_rates_of_n_clusters[n_clusters] = np.mean(
+        np.array(error_rates_of_folds), dtype=float
     )
 
+# write result to file which name is current time
+with open(f"result_{datetime.now()}.csv", "w") as f:
+    f.write("Number of Clusters,Error Rate\n")
+    for n_clusters, error_rate in error_rates_of_n_clusters.items():
+        f.write(f"{n_clusters},{error_rate}\n")
 
 libs.plot_line_graphs(
     x=n_clusters_range,
-    functions=lambda z: error_rates_of_n_clusters[z],  # type: ignore
+    functions={
+        "error_rate": lambda z: error_rates_of_n_clusters.get(z, 0),  # type: ignore
+    },
     x_label="Number of Clusters",
     y_label="Error Rate",
     title="Error Rate vs. Number of Clusters",

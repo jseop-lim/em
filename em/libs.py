@@ -121,6 +121,17 @@ def estimate_gmm_responsibilities(
     n_clusters = len(parameters)
     n_instances = x.shape[0]
 
+    def get_evidence(t: int) -> float:  # type: ignore
+        return sum(
+            parameters[j].weight
+            * MVN(
+                mean=parameters[j].mean,
+                cov=parameters[j].cov,
+                dim=x.shape[1],
+            ).pdf(x[t])
+            for j in range(n_clusters)
+        )
+
     return np.array(
         [
             [
@@ -130,19 +141,8 @@ def estimate_gmm_responsibilities(
                     cov=parameters[k].cov,
                     dim=x.shape[1],
                 ).pdf(x[t])
-                / evidence_t
+                / get_evidence(t)
                 for k in range(n_clusters)
-                if (
-                    evidence_t := sum(
-                        parameters[j].weight
-                        * MVN(
-                            mean=parameters[j].mean,
-                            cov=parameters[j].cov,
-                            dim=x.shape[1],
-                        ).pdf(x[t])
-                        for j in range(n_clusters)
-                    )
-                )
             ]
             for t in range(n_instances)
         ]
@@ -223,39 +223,6 @@ def em_algorithm(
     return parameters
 
 
-# class BayesianClassifier:
-#     def predict(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-#         """Predict the class of each data instances.
-
-#         Args:
-#             x: Data instances of shape (N, D)
-
-#         Returns: Predicted classes of shape (N,)
-#         """
-#         return np.argmax(self.likehood(x) * self.prior(), axis=1)
-
-#     def likehood(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-#         """Calculate the likelihood of each data instance for each class.
-
-#         Args:
-#             x: Data instances of shape (N, D)
-#             k: The number of classes
-
-#         Returns: Likelihood of each data instance for each class of shape (N, K)
-#         """
-#         raise NotImplementedError
-
-#     def prior(self) -> npt.NDArray[np.float64]:
-#         """Calculate the prior probability of each class.
-
-#         Args:
-#             k: The number of classes
-
-#         Returns: Prior probability of each class of shape (K,)
-#         """
-#         raise NotImplementedError
-
-
 class GaussianMixtureModelClassifier:
     def __init__(
         self,
@@ -266,7 +233,7 @@ class GaussianMixtureModelClassifier:
         # self.input_dataset = input_dataset
         # self.output_dataset = output_dataset
         self.n_classes = n_classes
-        self.parameters: list[list[GMMParameter]] = []
+        self.parameters_list: list[list[GMMParameter]] = []
 
     def set_known_parameters(self, parameters_list: list[list[GMMParameter]]) -> None:
         self.parameters_list = parameters_list
@@ -283,7 +250,7 @@ class GaussianMixtureModelClassifier:
 
         Returns: Predicted classes of shape (N,)
         """
-        return np.argmax(self.likelihood(x_set) * self.prior(), axis=1)  # type: ignore
+        return np.argmax(self.likelihood(x_set) * self.prior(y_set), axis=1)  # type: ignore
 
     def likelihood(self, x_set: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """Calculate the likelihood of each data instance for each class.
@@ -311,7 +278,7 @@ class GaussianMixtureModelClassifier:
                     )
                     for x in x_set
                 ]
-                for parameters in self.parameters
+                for parameters in self.parameters_list
             ]
         ).T
 
