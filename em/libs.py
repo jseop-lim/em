@@ -206,29 +206,6 @@ def estimate_gmm_parameters(
         for k in range(n_clusters)
     ]
 
-    # n_clusters = responsibilities.shape[1]
-    # n_instances = x.shape[0]
-
-    # def get_mean(k: int) -> npt.NDArray[np.float64]:
-    #     return np.average(x, axis=0, weights=responsibilities[:, k])  # type: ignore
-
-    # return [
-    #     GMMParameter(
-    #         mean=get_mean(k),
-    #         cov=np.sum(
-    #             [
-    #                 responsibilities[t, k]
-    #                 * np.outer(x[t] - get_mean(k), x[t] - get_mean(k))
-    #                 for t in range(n_instances)
-    #             ],
-    #             axis=0,
-    #         )
-    #         / np.sum(responsibilities[:, k]),
-    #         weight=np.sum(responsibilities[:, k]) / n_instances,
-    #     )
-    #     for k in range(n_clusters)
-    # ]
-
 
 def em_algorithm(
     x: npt.NDArray[np.float64],
@@ -299,20 +276,35 @@ class GaussianMixtureModelClassifier:
         Returns: Predicted classes of shape (N,)
         """
         return np.argmax(  # type: ignore
-            self.log_likelihood(x_set, y_set) + self.log_prior(y_set),
+            self.log_likelihood(x_set) + self.log_prior(y_set),
             axis=1,
         )
 
     def log_likelihood(
         self,
         x_set: npt.NDArray[np.float64],
-        y_set: npt.NDArray[np.int64],
     ) -> npt.NDArray[np.float64]:
-        """
+        """Calculate the log likelihood of each class for new data instances.
 
-        Returns:
-            (N, K)
+        Args:
+            x_set: Data instances of shape (N, D)
+
+        Returns: Log likelihood of each class of shape (N, K)
         """
+        # pdfs = np.array(
+        #     [
+        #         calculate_mvn_pdfs(x_set, parameters)
+        #         for parameters in self.parameters_list
+        #     ]
+        # )  # pdfs_knz = P(x_t | c_k, g_z) shape of (K, N, Z)
+        # weights = np.array(
+        #     [
+        #         [parameter.weight for parameter in parameters]
+        #         for parameters in self.parameters_list
+        #     ]
+        # )  # 열은 group, 행은 class, shape of (K, Z)
+        # return np.log(np.dot(pdfs, weights.T))  # type: ignore  # (K, N, Z) @ (K, Z) -> (K, N)
+
         log_likelihood = []
 
         for class_k in range(self.n_classes):
@@ -334,10 +326,8 @@ class GaussianMixtureModelClassifier:
 
         Returns: Prior probability of each class of shape (K,)
         """
-        return np.log(
-            np.array(
-                [np.sum(y_set == k) / y_set.shape[0] for k in range(self.n_classes)]
-            ),
+        return np.log(  # type: ignore
+            [np.sum(y_set == k) / y_set.shape[0] for k in range(self.n_classes)]
         )
 
 

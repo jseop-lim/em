@@ -8,14 +8,16 @@
 
 ### 1. 환경변수 설정
 
-파이썬 3.11 이상이 설치된 리눅스 환경을 기준으로 설명한다.
+### 리눅스/MacOS 환경
+
+파이썬 3.11 이상이 설치된 리눅스 환경을 기준으로 설명합니다.
 
 ```bash
 export TEST_DATA_PATH="./data/test_data.txt"
 export TRAIN_DATA_PATH="./data/train_data.txt"
 ```
 
-### 2. 파이썬 패키지 설치
+#### 2. 파이썬 패키지 설치
 
 Poetry 활용을 권장합니다.
 
@@ -24,33 +26,37 @@ poetry install  # Poetry가 설치되어 있을 경우
 pip install -r requirements.txt  # Poetry가 없을 경우
 ```
 
-### 3. 모델 학습
+#### 3. 모델 학습 및 테스트
 
 ```bash
 poetry run python em/trains.py  # Poetry가 설치되어 있을 경우
 python train.py  # Poetry가 없을 경우
 ```
 
+### Colab 환경
+
+![alt text](docs/colab.png)
+
 ## 모델 개요
 
 ### 데이터셋
 
-- input x는 D=13차원의 연속형 변수이다요
-- output y는 K=2개의 클래스를 갖는 범주형 변수이다.
-- 데이터셋에는 N=60290개의 sample이 존재한다.
+- input x는 D=13차원의 연속형 변수입니다.
+- output y는 K=2개의 클래스를 갖는 범주형 변수입니다.
+- 데이터셋에는 N=60290개의 sample이 존재합니다.
 
 ### Inductive Biases
 
-- iid 가정: 데이터셋의 sample끼리는 서로 독립적이고 동일한 분포를 따른다.
+- iid 가정: 데이터셋의 sample끼리는 서로 독립적이고 동일한 분포를 따릅니다.
   - P(x_1, x_2, ..., x_N) = Π_{n=1}^{N} P(x_n)
-- 베이지안 결정: x의 예측 결과는 각 class에 대한 posterior가 최대가 되는 class로 결정된다.
+- 베이지안 결정: x의 예측 결과는 각 class에 대한 posterior가 최대가 되는 class로 결정됩니다.
   - posterior P(c_k|x) = P(x|c_k) *P(c_k) / Σ_{j=1}^{K} P(x|c_j)* P(c_j)
-- likelihood 분포: class k에 대한 likelihood 분포 P(x|c_k)를 Mixtured Gaussian Distribution으로 가정한다.
+- likelihood 분포: class k에 대한 likelihood 분포 P(x|c_k)를 Mixtured Gaussian Distribution으로 가정합니다.
   - P(x|c_k) = Σ_{z=1}^{Z} P(x|g_z, c_k, θ_kz) * P(g_z|c_k, θ_z)
   - P(x|g_z, c_k, θ_kz) ~ N(x|μ_kz, Σ_kz)
   - P(g_z|c_k, θ_z) ~ Multinomial(g_z|ϕ_k) => P(g_z|c_k, θ_z) = ϕ_z
   - class별 group의 개수 Z는 같다. (*)
-- prior 분포: class k에 대한 prior 분포 P(c_k)를 Multinomial Distribution으로 가정한다.
+- prior 분포: class k에 대한 prior 분포 P(c_k)를 Multinomial Distribution으로 가정합니다.
   - P(c_k) ~ Multinomial(c_k|π) => P(c_k|θ_k) = π_k
 - 추정할 parameters: θ = {μ, Σ, ϕ, π}
   - μ_kz: class k일 때 group z의 D x 1 mean vector (μ: K x Z x D tensor)
@@ -117,16 +123,30 @@ prameter의 변화량의 수렴성과 최대 반복횟수를 종료 조건으로
 
 #### 2. 최대 반복횟수 설정
 
-EM 알고리즘의 수렴 속도가 느릴 수 있으므로, 최대 반복횟수를 3000회로 설정했습니다.
-대부분의 반복이 3000회 이내에 수렴하는 것을 관찰한 토대로 정한 수치입니다.
+EM 알고리즘의 수렴 속도가 느릴 수 있으므로, 최대 반복횟수를 2000회로 설정했습니다. 참고로, group 수가 4개일 때까지는 대부분의 반복이 2000회 이내에 수렴하는 것을 관찰했습니다.
 
 ## 모델 선택
 
-### 모델 선택 기준
+hyperparameter: class 별 group 수 z
 
-validation error rate를 최소로 하는 모델을 선택했습니다.
+k-fold cross validation을 사용하여 group 수(z)마다 validation error rate를 구하고, 그 중 가장 작은 validation error rate를 가지는 group 수를 가설 공간으로 선택했습니다.
+fold 수는 5로 설정했습니다. 즉, 학습 데이터셋(train.txt)을 5개로 나누어 구한 5개의 validation error rate의 평균을 group 수별로 구했습니다.
+
+![](docs/cross_validation_1.png)
+
+모델 선택 과정에서 정한 class 별 group 수는 4개입니다.
 
 ## 성능 평가
 
-모델 선택 과정에서 정한 class 별 group 수는 10개입니다.
 train.txt의 전체 데이터셋으로 학습한 모델을 test.txt의 데이터셋에 적용하여 error rate를 측정했습니다.
+
+```
+Training is done.
+Final Training...
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 134
+Testing...
+Test Error Rate: 0.15175770686857762
+```

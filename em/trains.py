@@ -28,7 +28,7 @@ train_dataset = libs.parse_file_to_array(train_data_path)
 fold_size = 5
 n_classes = 2
 n_min_clusters = 2
-n_max_clusters = 15
+n_max_clusters = 5
 
 
 def generate_init_parameters(
