@@ -1,0 +1,141 @@
+Number of Clusters,Error Rate
+2,0.15591308674738763
+3,0.15257920053076796
+4,0.15184939459280145
+5,0.15201525957870296
+
+
+Training...
+  Number of Clusters: 2
+    Fold: 1
+      EM algorithm
+      Iterations: 126
+      EM algorithm
+      Iterations: 107
+    Fold: 2
+      EM algorithm
+      Iterations: 332
+      EM algorithm
+      Iterations: 88
+    Fold: 3
+      EM algorithm
+      Iterations: 355
+      EM algorithm
+      Iterations: 114
+    Fold: 4
+      EM algorithm
+      Iterations: 489
+      EM algorithm
+      Iterations: 112
+    Fold: 5
+      EM algorithm
+      Iterations: 144
+      EM algorithm
+      Iterations: 121
+    Fold 1 Validation Error Rate: 0.1519323270857522
+    Fold 2 Validation Error Rate: 0.1369215458616686
+    Fold 3 Validation Error Rate: 0.17921711726654505
+    Fold 4 Validation Error Rate: 0.14156576546690994
+    Fold 5 Validation Error Rate: 0.16992867805606238
+  Number of Clusters: 3
+    Fold: 1
+      EM algorithm
+      Iterations: 1582
+      EM algorithm
+      Iterations: 76
+    Fold: 2
+      EM algorithm
+      Iterations: 1818
+      EM algorithm
+      Iterations: 94
+    Fold: 3
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 90
+    Fold: 4
+      EM algorithm
+      Iterations: 1444
+      EM algorithm
+      Iterations: 89
+    Fold: 5
+      EM algorithm
+      Iterations: 1469
+      EM algorithm
+      Iterations: 89
+    Fold 1 Validation Error Rate: 0.14985901476198374
+    Fold 2 Validation Error Rate: 0.13775087079117598
+    Fold 3 Validation Error Rate: 0.17531929009786035
+    Fold 4 Validation Error Rate: 0.13874606070658485
+    Fold 5 Validation Error Rate: 0.16122076629623486
+  Number of Clusters: 4
+    Fold: 1
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 157
+    Fold: 2
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 233
+    Fold: 3
+      EM algorithm
+      Iterations: 1483
+      EM algorithm
+      Iterations: 177
+    Fold: 4
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 207
+    Fold: 5
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 255
+    Fold 1 Validation Error Rate: 0.1493614198042793
+    Fold 2 Validation Error Rate: 0.13824846574888042
+    Fold 3 Validation Error Rate: 0.17407530270359928
+    Fold 4 Validation Error Rate: 0.1379996682700282
+    Fold 5 Validation Error Rate: 0.1595621164372201
+  Number of Clusters: 5
+    Fold: 1
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 298
+    Fold: 2
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 194
+    Fold: 3
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 242
+    Fold: 4
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 251
+    Fold: 5
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 404
+    Fold 1 Validation Error Rate: 0.14878089235362416
+    Fold 2 Validation Error Rate: 0.1370874108475701
+    Fold 3 Validation Error Rate: 0.17332891026704264
+    Fold 4 Validation Error Rate: 0.1375850058052745
+    Fold 5 Validation Error Rate: 0.1632940786200033
+
+Training is done.
+Final Training...
+      EM algorithm
+      Iterations: 2000
+      EM algorithm
+      Iterations: 134
+Testing...
+Test Error Rate: 0.15175770686857762
