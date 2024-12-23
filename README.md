@@ -1,6 +1,4 @@
-# COSE474 Machine Learning - GMM Classification with EM Algorithm
-
-2020170812 임정섭
+# GMM Classification with EM Algorithm
 
 ## 파일 구조
 
